@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goal Tracker</title>
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css?family=jetbrains-mono:300,400,500,600,700&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #2d353b;
+    --bg1:     #343f44;
+    --bg2:     #3d484d;
+    --bg3:     #475258;
+    --fg:      #d3c6aa;
+    --fg-dim:  #9da9a0;
+    --accent:  #7fbbb3;
+    --green:   #a7c080;
+    --yellow:  #dbbc7f;
+    --red:     #e67e80;
+    --purple:  #d699b6;
+    --teal2:   #83c092;
+    --font:    'JetBrains Mono', monospace;
+  }
+
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg);
+    font-family: var(--font);
+    color: var(--fg);
+    cursor: grab;
+  }
+  body:active { cursor: grabbing; }
+
+  #canvas-container {
+    position: fixed; inset: 0;
+  }
+
+  canvas { display: block; }
+
+  /* ─── HUD header ─────────────────────────────────── */
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 28px;
+    background: linear-gradient(to bottom, rgba(45,53,59,0.92) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 100;
+  }
+  #hud h1 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent);
+  }
+  #hud .stats {
+    display: flex; gap: 20px;
+    font-size: 11px; color: var(--fg-dim); letter-spacing: 0.06em;
+  }
+  #hud .stats span b { color: var(--fg); font-weight: 500; }
+
+  /* ─── Goal cards (CSS2D) ─────────────────────────── */
+  .goal-card {
+    width: 220px;
+    background: rgba(52, 63, 68, 0.72);
+    border: 1px solid rgba(127, 187, 179, 0.25);
+    border-radius: 10px;
+    padding: 14px 16px;
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    cursor: pointer;
+    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+    pointer-events: all;
+    user-select: none;
+  }
+  .goal-card:hover {
+    border-color: rgba(127, 187, 179, 0.7);
+    transform: scale(1.04);
+    box-shadow: 0 0 28px rgba(127, 187, 179, 0.18), 0 4px 24px rgba(0,0,0,0.45);
+  }
+  .goal-card.focused {
+    border-color: var(--accent);
+    box-shadow: 0 0 40px rgba(127, 187, 179, 0.28), 0 4px 32px rgba(0,0,0,0.55);
+  }
+  .card-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600; color: var(--fg);
+    line-height: 1.3; letter-spacing: 0.02em;
+  }
+  .card-badge {
+    font-size: 9px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 20px;
+    white-space: nowrap; margin-left: 8px; flex-shrink: 0;
+  }
+  .badge-todo       { background: rgba(71,82,88,0.6);  color: var(--fg-dim); border: 1px solid var(--bg3); }
+  .badge-in-progress{ background: rgba(219,188,127,0.15); color: var(--yellow); border: 1px solid rgba(219,188,127,0.35); }
+  .badge-done       { background: rgba(167,192,128,0.15); color: var(--green);  border: 1px solid rgba(167,192,128,0.35); }
+
+  .card-desc {
+    font-size: 10.5px; color: var(--fg-dim); line-height: 1.5; margin-bottom: 10px;
+  }
+  .card-progress-wrap {
+    height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 9px;
+  }
+  .card-progress-bar {
+    height: 100%; border-radius: 2px;
+    transition: width 0.8s cubic-bezier(.4,0,.2,1);
+  }
+  .bar-todo        { background: var(--bg3); }
+  .bar-in-progress { background: linear-gradient(90deg, var(--yellow), var(--accent)); }
+  .bar-done        { background: var(--green); }
+
+  .card-task-count {
+    font-size: 10px; color: var(--fg-dim); letter-spacing: 0.04em;
+  }
+  .card-task-count b { color: var(--fg); }
+
+  /* ─── Task tooltip ───────────────────────────────── */
+  #tooltip {
+    position: fixed;
+    background: rgba(52, 63, 68, 0.9);
+    border: 1px solid rgba(127, 187, 179, 0.4);
+    border-radius: 7px;
+    padding: 7px 11px;
+    pointer-events: none;
+    z-index: 200;
+    display: none;
+    backdrop-filter: blur(10px);
+    max-width: 200px;
+  }
+  #tooltip .tt-label {
+    font-size: 11px; font-weight: 500; color: var(--fg); margin-bottom: 4px;
+  }
+  #tooltip .tt-status {
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  #tooltip .tt-status.todo        { color: var(--fg-dim); }
+  #tooltip .tt-status.in-progress { color: var(--yellow); }
+  #tooltip .tt-status.done        { color: var(--green); }
+
+  /* ─── Back hint ──────────────────────────────────── */
+  #back-hint {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: var(--fg-dim); letter-spacing: 0.1em;
+    background: rgba(45,53,59,0.8); padding: 7px 16px; border-radius: 20px;
+    border: 1px solid var(--bg3);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 100;
+  }
+  #back-hint.visible { opacity: 1; }
+
+  /* ─── Legend ─────────────────────────────────────── */
+  #legend {
+    position: fixed; bottom: 24px; right: 28px;
+    font-size: 10px; color: var(--fg-dim); letter-spacing: 0.06em;
+    display: flex; flex-direction: column; gap: 5px;
+    z-index: 100;
+  }
+  .legend-item { display: flex; align-items: center; gap: 7px; }
+  .legend-dot {
+    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div id="hud">
+  <h1>⬡ Goal Tracker</h1>
+  <div class="stats">
+    <span><b id="stat-goals">0</b> goals</span>
+    <span><b id="stat-tasks">0</b> tasks</span>
+    <span><b id="stat-done">0</b> done</span>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="tt-label" id="tt-label"></div>
+  <div class="tt-status" id="tt-status"></div>
+</div>
+
+<div id="back-hint">click anywhere · esc to zoom out</div>
+
+<div id="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#475258"></div>todo</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#dbbc7f"></div>in progress</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a7c080"></div>done</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+// ─────────────────────────────────────────────────────────────────
+//  DATA
+// ─────────────────────────────────────────────────────────────────
+const GOALS = [
+  {
+    id: 'g1', title: 'Ship MVP', status: 'in-progress',
+    description: 'Core product ready for first paying users.',
+    position: { x: -3.2, y: 1.2, z: -0.8 },
+    tasks: [
+      { id: 't1', label: 'Auth flow',      status: 'done' },
+      { id: 't2', label: 'Dashboard UI',   status: 'in-progress' },
+      { id: 't3', label: 'Billing',        status: 'todo' },
+      { id: 't4', label: 'Onboarding',     status: 'todo' },
+      { id: 't5', label: 'Deploy to prod', status: 'todo' },
+    ]
+  },
+  {
+    id: 'g2', title: 'Health Ritual', status: 'in-progress',
+    description: 'Daily movement, sleep, and recovery.',
+    position: { x: 3.0, y: -0.6, z: 0.8 },
+    tasks: [
+      { id: 't6', label: 'Morning run',        status: 'in-progress' },
+      { id: 't7', label: 'Sleep by 23:00',     status: 'todo' },
+      { id: 't8', label: 'No phone after 22h', status: 'done' },
+    ]
+  },
+  {
+    id: 'g3', title: 'Learn Rust', status: 'todo',
+    description: 'Finish the Rust book + build one real project.',
+    position: { x: 0.4, y: 2.8, z: -3.2 },
+    tasks: [
+      { id: 't9',  label: 'Chapters 1–5',  status: 'done' },
+      { id: 't10', label: 'Chapters 6–10', status: 'in-progress' },
+      { id: 't11', label: 'CLI project',   status: 'todo' },
+      { id: 't12', label: 'Async chapter', status: 'todo' },
+    ]
+  },
+  {
+    id: 'g4', title: 'Deep Work Habit', status: 'done',
+    description: '4h focused blocks, no Slack before noon.',
+    position: { x: -1.2, y: -2.4, z: 1.6 },
+    tasks: [
+      { id: 't13', label: 'Block calendar',    status: 'done' },
+      { id: 't14', label: 'Mute notifications', status: 'done' },
+      { id: 't15', label: 'Weekly review',     status: 'done' },
+    ]
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────
+//  RENDERER + SCENE
+// ─────────────────────────────────────────────────────────────────
+const W = window.innerWidth, H = window.innerHeight;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(W, H);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+const css2dRenderer = new CSS2DRenderer();
+css2dRenderer.setSize(W, H);
+css2dRenderer.domElement.style.position = 'fixed';
+css2dRenderer.domElement.style.top = '0';
+css2dRenderer.domElement.style.left = '0';
+css2dRenderer.domElement.style.pointerEvents = 'none';
+document.getElementById('canvas-container').appendChild(css2dRenderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x2d353b);
+scene.fog = new THREE.FogExp2(0x2d353b, 0.045);
+
+const camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 200);
+camera.position.set(0, 2, 9);
+
+// ─────────────────────────────────────────────────────────────────
+//  LIGHTS
+// ─────────────────────────────────────────────────────────────────
+const ambient = new THREE.AmbientLight(0x7fbbb3, 0.4);
+scene.add(ambient);
+
+const sun = new THREE.DirectionalLight(0xd3c6aa, 1.2);
+sun.position.set(5, 8, 4);
+scene.add(sun);
+
+const rim = new THREE.PointLight(0x83c092, 1.8, 30);
+rim.position.set(-6, -3, -5);
+scene.add(rim);
+
+const fill = new THREE.PointLight(0xd699b6, 0.6, 20);
+fill.position.set(4, 4, 6);
+scene.add(fill);
+
+// ─────────────────────────────────────────────────────────────────
+//  STARFIELD
+// ─────────────────────────────────────────────────────────────────
+const starCount = 700;
+const starPositions = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  const r = 18 + Math.random() * 30;
+  starPositions[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+  starPositions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+  starPositions[i*3+2] = r * Math.cos(phi);
+}
+const starGeo = new THREE.BufferGeometry();
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+const starMat = new THREE.PointsMaterial({
+  color: 0xd3c6aa, size: 0.045, sizeAttenuation: true, transparent: true, opacity: 0.55
+});
+const stars = new THREE.Points(starGeo, starMat);
+scene.add(stars);
+
+// ─────────────────────────────────────────────────────────────────
+//  TASK DOT COLORS
+// ─────────────────────────────────────────────────────────────────
+const DOT_COLORS = {
+  'todo':        0x475258,
+  'in-progress': 0xdbbc7f,
+  'done':        0xa7c080,
+};
+const DOT_EMISSIVE = {
+  'todo':        0x1a1f22,
+  'in-progress': 0x5c4a18,
+  'done':        0x2a3d18,
+};
+const DOT_INTENSITY = {
+  'todo': 0.0, 'in-progress': 0.5, 'done': 0.25,
+};
+
+// ─────────────────────────────────────────────────────────────────
+//  BUILD SCENE OBJECTS
+// ─────────────────────────────────────────────────────────────────
+const dotGeo = new THREE.SphereGeometry(0.085, 10, 10);
+const allDots = []; // { mesh, goalId, task, phaseX, phaseY, phaseZ, basePos }
+const goalFocusPositions = {};
+
+GOALS.forEach(goal => {
+  const gp = new THREE.Vector3(goal.position.x, goal.position.y, goal.position.z);
+  goalFocusPositions[goal.id] = gp;
+
+  // Build HTML card
+  const card = document.createElement('div');
+  card.className = 'goal-card';
+  card.dataset.goalId = goal.id;
+
+  const doneCount = goal.tasks.filter(t => t.status === 'done').length;
+  const progressPct = Math.round(doneCount / goal.tasks.length * 100);
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-title">${goal.title}</div>
+      <div class="card-badge badge-${goal.status}">${goal.status.replace('-', ' ')}</div>
+    </div>
+    <div class="card-desc">${goal.description}</div>
+    <div class="card-progress-wrap">
+      <div class="card-progress-bar bar-${goal.status}" style="width:${progressPct}%"></div>
+    </div>
+    <div class="card-task-count"><b>${doneCount}/${goal.tasks.length}</b> tasks complete</div>
+  `;
+
+  card.addEventListener('click', (e) => {
+    e.stopPropagation();
+    focusGoal(goal.id, gp);
+  });
+
+  const label = new CSS2DObject(card);
+  label.position.copy(gp);
+  scene.add(label);
+
+  // Build task dots
+  goal.tasks.forEach((task, i) => {
+    const angle = (i / goal.tasks.length) * Math.PI * 2;
+    const radius = 1.2 + Math.random() * 0.8;
+    const yOff = (Math.random() - 0.5) * 1.2;
+
+    const basePos = new THREE.Vector3(
+      gp.x + Math.cos(angle) * radius,
+      gp.y + yOff,
+      gp.z + Math.sin(angle) * radius,
+    );
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: DOT_COLORS[task.status],
+      emissive: DOT_EMISSIVE[task.status],
+      emissiveIntensity: DOT_INTENSITY[task.status],
+      roughness: 0.4,
+      metalness: 0.1,
+    });
+
+    const mesh = new THREE.Mesh(dotGeo, mat);
+    mesh.position.copy(basePos);
+    mesh.userData = { task, goalId: goal.id };
+    scene.add(mesh);
+
+    allDots.push({
+      mesh,
+      goalId: goal.id,
+      task,
+      phaseX: Math.random() * Math.PI * 2,
+      phaseY: Math.random() * Math.PI * 2,
+      phaseZ: Math.random() * Math.PI * 2,
+      basePos: basePos.clone(),
+      baseScale: 1,
+    });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+//  HUD STATS
+// ─────────────────────────────────────────────────────────────────
+const totalTasks = GOALS.reduce((a, g) => a + g.tasks.length, 0);
+const doneTasks  = GOALS.reduce((a, g) => a + g.tasks.filter(t => t.status === 'done').length, 0);
+document.getElementById('stat-goals').textContent = GOALS.length;
+document.getElementById('stat-tasks').textContent = totalTasks;
+document.getElementById('stat-done').textContent  = doneTasks;
+
+// ─────────────────────────────────────────────────────────────────
+//  ORBIT CONTROLS
+// ─────────────────────────────────────────────────────────────────
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 2;
+controls.maxDistance = 22;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.18;
+
+// ─────────────────────────────────────────────────────────────────
+//  CAMERA TWEEN (no GSAP dep — manual lerp)
+// ─────────────────────────────────────────────────────────────────
+let tweenActive = false;
+let tweenFrom = new THREE.Vector3();
+let tweenTo   = new THREE.Vector3();
+let targetFrom = new THREE.Vector3();
+let targetTo   = new THREE.Vector3();
+let tweenT = 0;
+let focusedGoalId = null;
+
+const DEFAULT_CAM = new THREE.Vector3(0, 2, 9);
+const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
+
+function easeInOut(t) {
+  return t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+}
+
+function startTween(toPos, toTarget) {
+  tweenFrom.copy(camera.position);
+  tweenTo.copy(toPos);
+  targetFrom.copy(controls.target);
+  targetTo.copy(toTarget);
+  tweenT = 0;
+  tweenActive = true;
+  controls.autoRotate = false;
+}
+
+function focusGoal(id, gp) {
+  if (focusedGoalId === id) {
+    resetView(); return;
+  }
+  focusedGoalId = id;
+  document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('focused'));
+  document.querySelector(`[data-goal-id="${id}"]`)?.classList.add('focused');
+
+  const camOffset = new THREE.Vector3(gp.x + 0, gp.y + 0.5, gp.z + 3.5);
+  startTween(camOffset, gp.clone());
+  document.getElementById('back-hint').classList.add('visible');
+}
+
+function resetView() {
+  focusedGoalId = null;
+  document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('focused'));
+  startTween(DEFAULT_CAM, DEFAULT_TARGET);
+  document.getElementById('back-hint').classList.remove('visible');
+  controls.autoRotate = true;
+}
+
+// click canvas background → reset
+renderer.domElement.addEventListener('click', () => {
+  if (focusedGoalId) resetView();
+});
+
+// ESC → reset
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') resetView();
+});
+
+// ─────────────────────────────────────────────────────────────────
+//  RAYCASTER / TOOLTIP
+// ─────────────────────────────────────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse2D = new THREE.Vector2();
+const tooltip = document.getElementById('tooltip');
+const ttLabel  = document.getElementById('tt-label');
+const ttStatus = document.getElementById('tt-status');
+let hoveredDot = null;
+
+window.addEventListener('mousemove', e => {
+  mouse2D.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse2D.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse2D, camera);
+  const dotMeshes = allDots.map(d => d.mesh);
+  const hits = raycaster.intersectObjects(dotMeshes);
+
+  if (hits.length > 0) {
+    const hit = hits[0].object;
+    if (hoveredDot !== hit) {
+      // un-hover old
+      if (hoveredDot) {
+        const old = allDots.find(d => d.mesh === hoveredDot);
+        if (old) old.mesh.scale.setScalar(old.baseScale);
+      }
+      hoveredDot = hit;
+      hit.scale.setScalar(1.6);
+    }
+    const dotData = allDots.find(d => d.mesh === hit);
+    const task = dotData?.task;
+    if (task) {
+      ttLabel.textContent = task.label;
+      ttStatus.textContent = task.status.replace('-', ' ');
+      ttStatus.className = 'tt-status ' + task.status;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top  = (e.clientY - 10) + 'px';
+    }
+    document.body.style.cursor = 'pointer';
+  } else {
+    if (hoveredDot) {
+      const old = allDots.find(d => d.mesh === hoveredDot);
+      if (old) old.mesh.scale.setScalar(old.baseScale);
+      hoveredDot = null;
+    }
+    tooltip.style.display = 'none';
+    document.body.style.cursor = focusedGoalId ? 'default' : 'grab';
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+//  ANIMATION LOOP
+// ─────────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  // Dot wobble
+  allDots.forEach(d => {
+    const wobble = 0.06;
+    d.mesh.position.x = d.basePos.x + Math.sin(t * 0.55 + d.phaseX) * wobble;
+    d.mesh.position.y = d.basePos.y + Math.sin(t * 0.45 + d.phaseY) * wobble;
+    d.mesh.position.z = d.basePos.z + Math.sin(t * 0.50 + d.phaseZ) * wobble;
+  });
+
+  // Star slow rotation
+  stars.rotation.y = t * 0.005;
+  stars.rotation.x = t * 0.002;
+
+  // Camera tween
+  if (tweenActive) {
+    tweenT = Math.min(tweenT + 0.018, 1);
+    const e = easeInOut(tweenT);
+    camera.position.lerpVectors(tweenFrom, tweenTo, e);
+    controls.target.lerpVectors(targetFrom, targetTo, e);
+    controls.update();
+    if (tweenT >= 1) tweenActive = false;
+  } else {
+    controls.update();
+  }
+
+  renderer.render(scene, camera);
+  css2dRenderer.render(scene, camera);
+}
+
+animate();
+
+// ─────────────────────────────────────────────────────────────────
+//  RESIZE
+// ─────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  css2dRenderer.setSize(w, h);
+});
+</script>
+</body>
+</html>
