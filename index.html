@@ -24,6 +24,14 @@
     --purple:  #d699b6;
     --teal2:   #83c092;
     --font:    'JetBrains Mono', monospace;
+
+    /* Linear-inspired status colors */
+    --s-backlog:     #95a2b3;
+    --s-todo:        #b0bac9;
+    --s-inprogress:  #f96c01;
+    --s-inreview:    #5e6ad2;
+    --s-done:        #26c281;
+    --s-cancelled:   #cf3c45;
   }
 
   html, body {
@@ -35,135 +43,101 @@
   }
   body:active { cursor: grabbing; }
 
-  #canvas-container {
-    position: fixed; inset: 0;
-  }
-
+  #canvas-container { position: fixed; inset: 0; }
   canvas { display: block; }
 
-  /* ─── HUD header ─────────────────────────────────── */
+  /* ─── HUD ──────────────────────────────────────────── */
   #hud {
     position: fixed; top: 0; left: 0; right: 0;
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 28px;
     background: linear-gradient(to bottom, rgba(45,53,59,0.92) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 100;
+    pointer-events: none; z-index: 100;
   }
-  #hud h1 {
-    font-size: 13px; font-weight: 600; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--accent);
-  }
-  #hud .stats {
-    display: flex; gap: 20px;
-    font-size: 11px; color: var(--fg-dim); letter-spacing: 0.06em;
-  }
+  #hud h1 { font-size: 13px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); }
+  #hud .stats { display: flex; gap: 20px; font-size: 11px; color: var(--fg-dim); letter-spacing: 0.06em; }
   #hud .stats span b { color: var(--fg); font-weight: 500; }
 
-  /* ─── Goal cards (CSS2D) ─────────────────────────── */
+  /* ─── Goal cards (CSS2D) ──────────────────────────── */
   .goal-card {
     width: 220px;
     background: rgba(52, 63, 68, 0.72);
     border: 1px solid rgba(127, 187, 179, 0.25);
-    border-radius: 10px;
-    padding: 14px 16px;
+    border-radius: 10px; padding: 14px 16px;
     backdrop-filter: blur(14px) saturate(1.3);
     -webkit-backdrop-filter: blur(14px) saturate(1.3);
     cursor: pointer;
-    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
-    pointer-events: all;
-    user-select: none;
+    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s, opacity 0.35s;
+    pointer-events: all; user-select: none;
   }
   .goal-card:hover {
     border-color: rgba(127, 187, 179, 0.7);
     transform: scale(1.04);
-    box-shadow: 0 0 28px rgba(127, 187, 179, 0.18), 0 4px 24px rgba(0,0,0,0.45);
+    box-shadow: 0 0 28px rgba(127,187,179,0.18), 0 4px 24px rgba(0,0,0,0.45);
   }
   .goal-card.focused {
     border-color: var(--accent);
-    box-shadow: 0 0 40px rgba(127, 187, 179, 0.28), 0 4px 32px rgba(0,0,0,0.55);
+    box-shadow: 0 0 40px rgba(127,187,179,0.28), 0 4px 32px rgba(0,0,0,0.55);
   }
-  .card-header {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    margin-bottom: 6px;
-  }
-  .card-title {
-    font-size: 13px; font-weight: 600; color: var(--fg);
-    line-height: 1.3; letter-spacing: 0.02em;
-  }
+  .goal-card.dimmed { opacity: 0.2; pointer-events: none; }
+
+  .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--fg); line-height: 1.3; letter-spacing: 0.02em; }
   .card-badge {
-    font-size: 9px; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; padding: 2px 7px; border-radius: 20px;
-    white-space: nowrap; margin-left: 8px; flex-shrink: 0;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 20px; white-space: nowrap; margin-left: 8px; flex-shrink: 0;
   }
-  .badge-todo       { background: rgba(71,82,88,0.6);  color: var(--fg-dim); border: 1px solid var(--bg3); }
-  .badge-in-progress{ background: rgba(219,188,127,0.15); color: var(--yellow); border: 1px solid rgba(219,188,127,0.35); }
-  .badge-done       { background: rgba(167,192,128,0.15); color: var(--green);  border: 1px solid rgba(167,192,128,0.35); }
+  .badge-todo        { background: rgba(71,82,88,0.6);   color: var(--fg-dim); border: 1px solid var(--bg3); }
+  .badge-in-progress { background: rgba(249,108,1,0.15); color: var(--s-inprogress); border: 1px solid rgba(249,108,1,0.35); }
+  .badge-done        { background: rgba(38,194,129,0.12); color: var(--s-done);      border: 1px solid rgba(38,194,129,0.35); }
 
-  .card-desc {
-    font-size: 10.5px; color: var(--fg-dim); line-height: 1.5; margin-bottom: 10px;
-  }
-  .card-progress-wrap {
-    height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 9px;
-  }
-  .card-progress-bar {
-    height: 100%; border-radius: 2px;
-    transition: width 0.8s cubic-bezier(.4,0,.2,1);
-  }
-  .bar-todo        { background: var(--bg3); }
-  .bar-in-progress { background: linear-gradient(90deg, var(--yellow), var(--accent)); }
-  .bar-done        { background: var(--green); }
-
-  .card-task-count {
-    font-size: 10px; color: var(--fg-dim); letter-spacing: 0.04em;
-  }
+  .card-desc { font-size: 10.5px; color: var(--fg-dim); line-height: 1.5; margin-bottom: 10px; }
+  .card-progress-wrap { height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 9px; }
+  .card-progress-bar { height: 100%; border-radius: 2px; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+  .bar-todo         { background: var(--bg3); }
+  .bar-in-progress  { background: linear-gradient(90deg, var(--s-inprogress), var(--accent)); }
+  .bar-done         { background: var(--s-done); }
+  .card-task-count  { font-size: 10px; color: var(--fg-dim); letter-spacing: 0.04em; }
   .card-task-count b { color: var(--fg); }
 
-  /* ─── Task tooltip ───────────────────────────────── */
+  /* ─── Tooltip ─────────────────────────────────────── */
   #tooltip {
     position: fixed;
-    background: rgba(52, 63, 68, 0.9);
-    border: 1px solid rgba(127, 187, 179, 0.4);
-    border-radius: 7px;
-    padding: 7px 11px;
-    pointer-events: none;
-    z-index: 200;
-    display: none;
-    backdrop-filter: blur(10px);
-    max-width: 200px;
+    background: rgba(52,63,68,0.92); border: 1px solid rgba(127,187,179,0.4);
+    border-radius: 7px; padding: 8px 12px;
+    pointer-events: none; z-index: 200; display: none;
+    backdrop-filter: blur(10px); max-width: 200px;
   }
-  #tooltip .tt-label {
-    font-size: 11px; font-weight: 500; color: var(--fg); margin-bottom: 4px;
+  #tooltip .tt-label  { font-size: 11px; font-weight: 500; color: var(--fg); margin-bottom: 5px; }
+  #tooltip .tt-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 9.5px; letter-spacing: 0.09em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 20px; font-weight: 600;
   }
-  #tooltip .tt-status {
-    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
-  }
-  #tooltip .tt-status.todo        { color: var(--fg-dim); }
-  #tooltip .tt-status.in-progress { color: var(--yellow); }
-  #tooltip .tt-status.done        { color: var(--green); }
+  .chip-todo        { background: rgba(176,186,201,0.12); color: var(--s-todo);        border: 1px solid rgba(176,186,201,0.3); }
+  .chip-in-progress { background: rgba(249,108,1,0.12);   color: var(--s-inprogress);  border: 1px solid rgba(249,108,1,0.35); }
+  .chip-done        { background: rgba(38,194,129,0.1);   color: var(--s-done);        border: 1px solid rgba(38,194,129,0.3); }
+  .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-  /* ─── Back hint ──────────────────────────────────── */
+  /* ─── Hint & Legend ───────────────────────────────── */
   #back-hint {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     font-size: 11px; color: var(--fg-dim); letter-spacing: 0.1em;
-    background: rgba(45,53,59,0.8); padding: 7px 16px; border-radius: 20px;
-    border: 1px solid var(--bg3);
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.3s;
-    z-index: 100;
+    background: rgba(45,53,59,0.85); padding: 7px 16px;
+    border-radius: 20px; border: 1px solid var(--bg3);
+    opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 100;
   }
   #back-hint.visible { opacity: 1; }
 
-  /* ─── Legend ─────────────────────────────────────── */
   #legend {
     position: fixed; bottom: 24px; right: 28px;
     font-size: 10px; color: var(--fg-dim); letter-spacing: 0.06em;
-    display: flex; flex-direction: column; gap: 5px;
-    z-index: 100;
+    display: flex; flex-direction: column; gap: 6px; z-index: 100;
   }
-  .legend-item { display: flex; align-items: center; gap: 7px; }
-  .legend-dot {
-    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-ring {
+    width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+    background: transparent;
   }
 </style>
 </head>
@@ -182,15 +156,21 @@
 
 <div id="tooltip">
   <div class="tt-label" id="tt-label"></div>
-  <div class="tt-status" id="tt-status"></div>
+  <div id="tt-chip-wrap"></div>
 </div>
 
-<div id="back-hint">click anywhere · esc to zoom out</div>
+<div id="back-hint">click background · esc to zoom out</div>
 
 <div id="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#475258"></div>todo</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#dbbc7f"></div>in progress</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#a7c080"></div>done</div>
+  <div class="legend-item">
+    <div class="legend-ring" style="border: 2px solid #b0bac9"></div>todo
+  </div>
+  <div class="legend-item">
+    <div class="legend-ring" style="border: 2px solid #f96c01"></div>in progress
+  </div>
+  <div class="legend-item">
+    <div class="legend-ring" style="border: 2px solid #26c281; box-shadow: 0 0 6px rgba(38,194,129,0.4)"></div>done
+  </div>
 </div>
 
 <script type="importmap">
@@ -216,11 +196,11 @@ const GOALS = [
     description: 'Core product ready for first paying users.',
     position: { x: -3.2, y: 1.2, z: -0.8 },
     tasks: [
-      { id: 't1', label: 'Auth flow',      status: 'done' },
-      { id: 't2', label: 'Dashboard UI',   status: 'in-progress' },
-      { id: 't3', label: 'Billing',        status: 'todo' },
-      { id: 't4', label: 'Onboarding',     status: 'todo' },
-      { id: 't5', label: 'Deploy to prod', status: 'todo' },
+      { id: 't1',  label: 'Auth flow',      status: 'done' },
+      { id: 't2',  label: 'Dashboard UI',   status: 'in-progress' },
+      { id: 't3',  label: 'Billing',        status: 'todo' },
+      { id: 't4',  label: 'Onboarding',     status: 'todo' },
+      { id: 't5',  label: 'Deploy to prod', status: 'todo' },
     ]
   },
   {
@@ -228,9 +208,9 @@ const GOALS = [
     description: 'Daily movement, sleep, and recovery.',
     position: { x: 3.0, y: -0.6, z: 0.8 },
     tasks: [
-      { id: 't6', label: 'Morning run',        status: 'in-progress' },
-      { id: 't7', label: 'Sleep by 23:00',     status: 'todo' },
-      { id: 't8', label: 'No phone after 22h', status: 'done' },
+      { id: 't6',  label: 'Morning run',         status: 'in-progress' },
+      { id: 't7',  label: 'Sleep by 23:00',      status: 'todo' },
+      { id: 't8',  label: 'No phone after 22h',  status: 'done' },
     ]
   },
   {
@@ -249,19 +229,85 @@ const GOALS = [
     description: '4h focused blocks, no Slack before noon.',
     position: { x: -1.2, y: -2.4, z: 1.6 },
     tasks: [
-      { id: 't13', label: 'Block calendar',    status: 'done' },
+      { id: 't13', label: 'Block calendar',     status: 'done' },
       { id: 't14', label: 'Mute notifications', status: 'done' },
-      { id: 't15', label: 'Weekly review',     status: 'done' },
+      { id: 't15', label: 'Weekly review',      status: 'done' },
     ]
   },
 ];
+
+// ─────────────────────────────────────────────────────────────────
+//  LINEAR STATUS COLORS
+// ─────────────────────────────────────────────────────────────────
+const STATUS_COLOR = {
+  'todo':        '#b0bac9',
+  'in-progress': '#f96c01',
+  'done':        '#26c281',
+};
+const STATUS_GLOW = {
+  'todo':        'rgba(176,186,201,0)',
+  'in-progress': 'rgba(249,108,1,0.55)',
+  'done':        'rgba(38,194,129,0.45)',
+};
+const STATUS_CHIP_CLASS = {
+  'todo':        'chip-todo',
+  'in-progress': 'chip-in-progress',
+  'done':        'chip-done',
+};
+
+// ─────────────────────────────────────────────────────────────────
+//  SPRITE FACTORY — canvas-drawn outlined circle, always faces cam
+// ─────────────────────────────────────────────────────────────────
+function makeRingSprite(hexColor, glowColor, size = 128) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const cx = size / 2, cy = size / 2, r = size / 2 - 8;
+
+  // glow halo
+  if (glowColor !== 'rgba(176,186,201,0)') {
+    const grad = ctx.createRadialGradient(cx, cy, r * 0.4, cx, cy, r + 6);
+    grad.addColorStop(0, glowColor);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // inner subtle fill
+  ctx.fillStyle = hexColor.replace(')', ',0.08)').replace('rgb', 'rgba').replace('#', '');
+  // simple approach: just draw a very faint fill
+  const fillColor = hexColor;
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = fillColor;
+  ctx.beginPath(); ctx.arc(cx, cy, r - 2, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1.0;
+
+  // ring stroke
+  ctx.strokeStyle = hexColor;
+  ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+
+  // small center dot
+  ctx.fillStyle = hexColor;
+  ctx.globalAlpha = 0.55;
+  ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1.0;
+
+  const texture = new THREE.CanvasTexture(canvas);
+  return new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    opacity: 1.0,
+  });
+}
 
 // ─────────────────────────────────────────────────────────────────
 //  RENDERER + SCENE
 // ─────────────────────────────────────────────────────────────────
 const W = window.innerWidth, H = window.innerHeight;
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(W, H);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -278,7 +324,7 @@ document.getElementById('canvas-container').appendChild(css2dRenderer.domElement
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x2d353b);
-scene.fog = new THREE.FogExp2(0x2d353b, 0.045);
+scene.fog = new THREE.FogExp2(0x2d353b, 0.038);
 
 const camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 200);
 camera.position.set(0, 2, 9);
@@ -286,104 +332,81 @@ camera.position.set(0, 2, 9);
 // ─────────────────────────────────────────────────────────────────
 //  LIGHTS
 // ─────────────────────────────────────────────────────────────────
-const ambient = new THREE.AmbientLight(0x7fbbb3, 0.4);
-scene.add(ambient);
-
-const sun = new THREE.DirectionalLight(0xd3c6aa, 1.2);
-sun.position.set(5, 8, 4);
-scene.add(sun);
-
-const rim = new THREE.PointLight(0x83c092, 1.8, 30);
-rim.position.set(-6, -3, -5);
-scene.add(rim);
-
-const fill = new THREE.PointLight(0xd699b6, 0.6, 20);
-fill.position.set(4, 4, 6);
-scene.add(fill);
+scene.add(new THREE.AmbientLight(0x7fbbb3, 0.45));
+const sun = new THREE.DirectionalLight(0xd3c6aa, 1.1);
+sun.position.set(5, 8, 4); scene.add(sun);
+const rim = new THREE.PointLight(0x83c092, 1.6, 30);
+rim.position.set(-6, -3, -5); scene.add(rim);
 
 // ─────────────────────────────────────────────────────────────────
 //  STARFIELD
 // ─────────────────────────────────────────────────────────────────
 const starCount = 700;
-const starPositions = new Float32Array(starCount * 3);
+const starPos = new Float32Array(starCount * 3);
 for (let i = 0; i < starCount; i++) {
   const theta = Math.random() * Math.PI * 2;
   const phi = Math.acos(2 * Math.random() - 1);
-  const r = 18 + Math.random() * 30;
-  starPositions[i*3]   = r * Math.sin(phi) * Math.cos(theta);
-  starPositions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-  starPositions[i*3+2] = r * Math.cos(phi);
+  const r = 20 + Math.random() * 28;
+  starPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+  starPos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+  starPos[i*3+2] = r * Math.cos(phi);
 }
 const starGeo = new THREE.BufferGeometry();
-starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-const starMat = new THREE.PointsMaterial({
-  color: 0xd3c6aa, size: 0.045, sizeAttenuation: true, transparent: true, opacity: 0.55
-});
-const stars = new THREE.Points(starGeo, starMat);
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
+  color: 0xd3c6aa, size: 0.04, sizeAttenuation: true, transparent: true, opacity: 0.5
+}));
 scene.add(stars);
 
 // ─────────────────────────────────────────────────────────────────
-//  TASK DOT COLORS
+//  BUILD GOALS + TASKS + CONNECTOR LINES
 // ─────────────────────────────────────────────────────────────────
-const DOT_COLORS = {
-  'todo':        0x475258,
-  'in-progress': 0xdbbc7f,
-  'done':        0xa7c080,
-};
-const DOT_EMISSIVE = {
-  'todo':        0x1a1f22,
-  'in-progress': 0x5c4a18,
-  'done':        0x2a3d18,
-};
-const DOT_INTENSITY = {
-  'todo': 0.0, 'in-progress': 0.5, 'done': 0.25,
-};
+const allDots = [];     // { sprite, goalId, task, phaseX/Y/Z, basePos, targetOpacity, currentOpacity }
+const allLines = [];    // { line, goalId, targetOpacity, currentOpacity }
+const goalCards = {};   // goalId → DOM element
+const goalPositions = {};
 
-// ─────────────────────────────────────────────────────────────────
-//  BUILD SCENE OBJECTS
-// ─────────────────────────────────────────────────────────────────
-const dotGeo = new THREE.SphereGeometry(0.085, 10, 10);
-const allDots = []; // { mesh, goalId, task, phaseX, phaseY, phaseZ, basePos }
-const goalFocusPositions = {};
+// Pre-bake sprite materials per status (reuse across dots)
+const spriteMats = {};
+Object.keys(STATUS_COLOR).forEach(s => {
+  spriteMats[s] = makeRingSprite(STATUS_COLOR[s], STATUS_GLOW[s]);
+});
 
 GOALS.forEach(goal => {
   const gp = new THREE.Vector3(goal.position.x, goal.position.y, goal.position.z);
-  goalFocusPositions[goal.id] = gp;
+  goalPositions[goal.id] = gp;
 
-  // Build HTML card
+  // ── Goal card HTML ──
   const card = document.createElement('div');
   card.className = 'goal-card';
   card.dataset.goalId = goal.id;
+  goalCards[goal.id] = card;
 
   const doneCount = goal.tasks.filter(t => t.status === 'done').length;
-  const progressPct = Math.round(doneCount / goal.tasks.length * 100);
+  const pct = Math.round(doneCount / goal.tasks.length * 100);
 
   card.innerHTML = `
     <div class="card-header">
       <div class="card-title">${goal.title}</div>
-      <div class="card-badge badge-${goal.status}">${goal.status.replace('-', ' ')}</div>
+      <div class="card-badge badge-${goal.status}">${goal.status.replace('-', '\u2009')}</div>
     </div>
     <div class="card-desc">${goal.description}</div>
     <div class="card-progress-wrap">
-      <div class="card-progress-bar bar-${goal.status}" style="width:${progressPct}%"></div>
+      <div class="card-progress-bar bar-${goal.status}" style="width:${pct}%"></div>
     </div>
     <div class="card-task-count"><b>${doneCount}/${goal.tasks.length}</b> tasks complete</div>
   `;
-
-  card.addEventListener('click', (e) => {
-    e.stopPropagation();
-    focusGoal(goal.id, gp);
-  });
+  card.addEventListener('click', e => { e.stopPropagation(); focusGoal(goal.id, gp); });
 
   const label = new CSS2DObject(card);
   label.position.copy(gp);
   scene.add(label);
 
-  // Build task dots
+  // ── Task dots + connector lines ──
   goal.tasks.forEach((task, i) => {
-    const angle = (i / goal.tasks.length) * Math.PI * 2;
-    const radius = 1.2 + Math.random() * 0.8;
-    const yOff = (Math.random() - 0.5) * 1.2;
+    const angle = (i / goal.tasks.length) * Math.PI * 2 + Math.random() * 0.4;
+    const radius = 1.3 + Math.random() * 0.9;
+    const yOff = (Math.random() - 0.5) * 1.4;
 
     const basePos = new THREE.Vector3(
       gp.x + Math.cos(angle) * radius,
@@ -391,28 +414,40 @@ GOALS.forEach(goal => {
       gp.z + Math.sin(angle) * radius,
     );
 
-    const mat = new THREE.MeshStandardMaterial({
-      color: DOT_COLORS[task.status],
-      emissive: DOT_EMISSIVE[task.status],
-      emissiveIntensity: DOT_INTENSITY[task.status],
-      roughness: 0.4,
-      metalness: 0.1,
-    });
+    // Sprite (cloned material so opacity is independent per dot)
+    const mat = spriteMats[task.status].clone();
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.setScalar(0.38);
+    sprite.position.copy(basePos);
+    sprite.userData = { task, goalId: goal.id };
+    scene.add(sprite);
 
-    const mesh = new THREE.Mesh(dotGeo, mat);
-    mesh.position.copy(basePos);
-    mesh.userData = { task, goalId: goal.id };
-    scene.add(mesh);
+    // Connector line: dot → goal card anchor
+    const lineGeo = new THREE.BufferGeometry().setFromPoints([basePos.clone(), gp.clone()]);
+    const lineMat = new THREE.LineBasicMaterial({
+      color: new THREE.Color(STATUS_COLOR[task.status]),
+      transparent: true,
+      opacity: 0.18,
+      depthWrite: false,
+    });
+    const line = new THREE.Line(lineGeo, lineMat);
+    scene.add(line);
 
     allDots.push({
-      mesh,
-      goalId: goal.id,
-      task,
+      sprite, goalId: goal.id, task,
       phaseX: Math.random() * Math.PI * 2,
       phaseY: Math.random() * Math.PI * 2,
       phaseZ: Math.random() * Math.PI * 2,
       basePos: basePos.clone(),
-      baseScale: 1,
+      targetOpacity: 1.0,
+      currentOpacity: 1.0,
+    });
+
+    allLines.push({
+      line, goalId: goal.id,
+      targetOpacity: 0.18,
+      currentOpacity: 0.18,
+      baseOpacity: 0.18,
     });
   });
 });
@@ -435,113 +470,115 @@ controls.dampingFactor = 0.06;
 controls.minDistance = 2;
 controls.maxDistance = 22;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 0.18;
+controls.autoRotateSpeed = 0.2;
 
 // ─────────────────────────────────────────────────────────────────
-//  CAMERA TWEEN (no GSAP dep — manual lerp)
+//  CAMERA TWEEN
 // ─────────────────────────────────────────────────────────────────
 let tweenActive = false;
-let tweenFrom = new THREE.Vector3();
-let tweenTo   = new THREE.Vector3();
-let targetFrom = new THREE.Vector3();
-let targetTo   = new THREE.Vector3();
+let tweenFrom = new THREE.Vector3(), tweenTo = new THREE.Vector3();
+let targetFrom = new THREE.Vector3(), targetTo = new THREE.Vector3();
 let tweenT = 0;
 let focusedGoalId = null;
 
-const DEFAULT_CAM = new THREE.Vector3(0, 2, 9);
+const DEFAULT_CAM    = new THREE.Vector3(0, 2, 9);
 const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
 
-function easeInOut(t) {
-  return t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
-}
+function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
 
 function startTween(toPos, toTarget) {
   tweenFrom.copy(camera.position);
   tweenTo.copy(toPos);
   targetFrom.copy(controls.target);
   targetTo.copy(toTarget);
-  tweenT = 0;
-  tweenActive = true;
+  tweenT = 0; tweenActive = true;
   controls.autoRotate = false;
 }
 
+function setFadeTargets(focusId) {
+  allDots.forEach(d => {
+    d.targetOpacity = (!focusId || d.goalId === focusId) ? 1.0 : 0.05;
+  });
+  allLines.forEach(l => {
+    l.targetOpacity = (!focusId || l.goalId === focusId) ? l.baseOpacity : 0.0;
+  });
+  // dim non-focused cards
+  Object.entries(goalCards).forEach(([id, el]) => {
+    if (!focusId) {
+      el.classList.remove('dimmed');
+    } else {
+      id === focusId ? el.classList.remove('dimmed') : el.classList.add('dimmed');
+    }
+  });
+}
+
 function focusGoal(id, gp) {
-  if (focusedGoalId === id) {
-    resetView(); return;
-  }
+  if (focusedGoalId === id) { resetView(); return; }
   focusedGoalId = id;
+
   document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('focused'));
   document.querySelector(`[data-goal-id="${id}"]`)?.classList.add('focused');
 
-  const camOffset = new THREE.Vector3(gp.x + 0, gp.y + 0.5, gp.z + 3.5);
+  const camOffset = new THREE.Vector3(gp.x, gp.y + 0.5, gp.z + 3.8);
   startTween(camOffset, gp.clone());
+  setFadeTargets(id);
   document.getElementById('back-hint').classList.add('visible');
 }
 
 function resetView() {
   focusedGoalId = null;
-  document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('focused'));
+  document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('focused', 'dimmed'));
   startTween(DEFAULT_CAM, DEFAULT_TARGET);
+  setFadeTargets(null);
   document.getElementById('back-hint').classList.remove('visible');
   controls.autoRotate = true;
 }
 
-// click canvas background → reset
-renderer.domElement.addEventListener('click', () => {
-  if (focusedGoalId) resetView();
-});
-
-// ESC → reset
-window.addEventListener('keydown', e => {
-  if (e.key === 'Escape') resetView();
-});
+renderer.domElement.addEventListener('click', () => { if (focusedGoalId) resetView(); });
+window.addEventListener('keydown', e => { if (e.key === 'Escape') resetView(); });
 
 // ─────────────────────────────────────────────────────────────────
 //  RAYCASTER / TOOLTIP
 // ─────────────────────────────────────────────────────────────────
 const raycaster = new THREE.Raycaster();
+raycaster.params.Sprite = { threshold: 0.15 };
 const mouse2D = new THREE.Vector2();
 const tooltip = document.getElementById('tooltip');
-const ttLabel  = document.getElementById('tt-label');
-const ttStatus = document.getElementById('tt-status');
-let hoveredDot = null;
+let hoveredSprite = null;
 
 window.addEventListener('mousemove', e => {
-  mouse2D.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mouse2D.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
+  mouse2D.x =  (e.clientX / W) * 2 - 1;
+  mouse2D.y = -(e.clientY / H) * 2 + 1;
   raycaster.setFromCamera(mouse2D, camera);
-  const dotMeshes = allDots.map(d => d.mesh);
-  const hits = raycaster.intersectObjects(dotMeshes);
+
+  const sprites = allDots.map(d => d.sprite);
+  const hits = raycaster.intersectObjects(sprites);
 
   if (hits.length > 0) {
     const hit = hits[0].object;
-    if (hoveredDot !== hit) {
-      // un-hover old
-      if (hoveredDot) {
-        const old = allDots.find(d => d.mesh === hoveredDot);
-        if (old) old.mesh.scale.setScalar(old.baseScale);
-      }
-      hoveredDot = hit;
-      hit.scale.setScalar(1.6);
+    if (hoveredSprite !== hit) {
+      if (hoveredSprite) hoveredSprite.scale.setScalar(0.38);
+      hoveredSprite = hit;
+      hit.scale.setScalar(0.52);
     }
-    const dotData = allDots.find(d => d.mesh === hit);
-    const task = dotData?.task;
-    if (task) {
-      ttLabel.textContent = task.label;
-      ttStatus.textContent = task.status.replace('-', ' ');
-      ttStatus.className = 'tt-status ' + task.status;
+    const dotData = allDots.find(d => d.sprite === hit);
+    if (dotData) {
+      const { task } = dotData;
+      document.getElementById('tt-label').textContent = task.label;
+      const chipWrap = document.getElementById('tt-chip-wrap');
+      const colorHex = STATUS_COLOR[task.status];
+      chipWrap.innerHTML = `
+        <span class="tt-chip ${STATUS_CHIP_CLASS[task.status]}">
+          <span class="chip-dot" style="background:${colorHex}"></span>
+          ${task.status.replace('-', ' ')}
+        </span>`;
       tooltip.style.display = 'block';
       tooltip.style.left = (e.clientX + 14) + 'px';
       tooltip.style.top  = (e.clientY - 10) + 'px';
     }
     document.body.style.cursor = 'pointer';
   } else {
-    if (hoveredDot) {
-      const old = allDots.find(d => d.mesh === hoveredDot);
-      if (old) old.mesh.scale.setScalar(old.baseScale);
-      hoveredDot = null;
-    }
+    if (hoveredSprite) { hoveredSprite.scale.setScalar(0.38); hoveredSprite = null; }
     tooltip.style.display = 'none';
     document.body.style.cursor = focusedGoalId ? 'default' : 'grab';
   }
@@ -556,22 +593,38 @@ function animate() {
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
 
-  // Dot wobble
+  // Dot wobble + opacity lerp
   allDots.forEach(d => {
-    const wobble = 0.06;
-    d.mesh.position.x = d.basePos.x + Math.sin(t * 0.55 + d.phaseX) * wobble;
-    d.mesh.position.y = d.basePos.y + Math.sin(t * 0.45 + d.phaseY) * wobble;
-    d.mesh.position.z = d.basePos.z + Math.sin(t * 0.50 + d.phaseZ) * wobble;
+    const w = 0.055;
+    d.sprite.position.x = d.basePos.x + Math.sin(t * 0.52 + d.phaseX) * w;
+    d.sprite.position.y = d.basePos.y + Math.sin(t * 0.43 + d.phaseY) * w;
+    d.sprite.position.z = d.basePos.z + Math.sin(t * 0.48 + d.phaseZ) * w;
+
+    // Smooth opacity transition
+    d.currentOpacity += (d.targetOpacity - d.currentOpacity) * 0.07;
+    d.sprite.material.opacity = d.currentOpacity;
   });
 
-  // Star slow rotation
+  // Line endpoint tracking (dots wobble so lines should track) + opacity lerp
+  allLines.forEach((l, i) => {
+    const dot = allDots[i];
+    if (dot) {
+      const pos = l.line.geometry.attributes.position;
+      pos.setXYZ(0, dot.sprite.position.x, dot.sprite.position.y, dot.sprite.position.z);
+      pos.needsUpdate = true;
+    }
+    l.currentOpacity += (l.targetOpacity - l.currentOpacity) * 0.07;
+    l.line.material.opacity = l.currentOpacity;
+  });
+
+  // Starfield drift
   stars.rotation.y = t * 0.005;
   stars.rotation.x = t * 0.002;
 
   // Camera tween
   if (tweenActive) {
     tweenT = Math.min(tweenT + 0.018, 1);
-    const e = easeInOut(tweenT);
+    const e = ease(tweenT);
     camera.position.lerpVectors(tweenFrom, tweenTo, e);
     controls.target.lerpVectors(targetFrom, targetTo, e);
     controls.update();
